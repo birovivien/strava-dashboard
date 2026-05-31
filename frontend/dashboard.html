@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Strava Dashboard</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f0f0f0;
+            margin: 0;
+            padding: 20px;
+        }
+
+        h1 {
+            color: #FC4C02;
+        }
+
+        .stats-container {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        h2 {
+            margin-top: 0;
+            font-size: 1rem;
+            color: #333;
+        }
+
+        canvas {
+            width: 100% !important;
+        }
+    </style>
+</head>
+<body>
+    <h1>My Strava Dashboard</h1>
+
+    <div class="stats-container">
+        <div class="card">
+            <h2>Weekly Distance (km)</h2>
+            <canvas id="weeklyDistanceChart"></canvas>
+        </div>
+        <div class="card">
+            <h2>Average Heart Rate by Month</h2>
+            <canvas id="heartRateChart"></canvas>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        const API = "http://localhost:8000";
+
+        async function loadWeeklyDistance() {
+            const resp = await fetch(`${API}/stats/weekly-distance`);
+            const data = await resp.json();
+
+            const labels = [...new Set(data.map(d => d.week.substring(0, 10)))];
+            const sportTypes = [...new Set(data.map(d => d.sport_type))];
+
+            const colors = {
+                "Run": "#FC4C02",
+                "Ride": "#4C9BE8",
+                "Walk": "#2ECC71"
+            };
+
+            const datasets = sportTypes.map(sport => ({
+                label: sport,
+                data: labels.map(week => {
+                    const match = data.find(d => d.week.substring(0, 10) === week && d.sport_type === sport);
+                    return match ? match.total_km : 0;
+                }),
+                backgroundColor: colors[sport] || "#999"
+            }));
+
+            new Chart(document.getElementById("weeklyDistanceChart"), {
+                type: "bar",
+                data: { labels, datasets },
+                options: {
+                    responsive: true,
+                    scales: { x: { stacked: true }, y: { stacked: true } }
+                }
+            });
+        }
+
+        async function loadHeartRate() {
+            const resp = await fetch(`${API}/stats/monthly-avg-hr`);
+            const data = await resp.json();
+
+            const sportTypes = [...new Set(data.map(d => d.sport_type))];
+            const labels = [...new Set(data.map(d => d.month.substring(0, 7)))];
+
+            const colors = {
+                "Run": "#FC4C02",
+                "Ride": "#4C9BE8",
+                "Walk": "#2ECC71"
+            };
+
+            const datasets = sportTypes.map(sport => ({
+                label: sport,
+                data: labels.map(month => {
+                    const match = data.find(d => d.month.substring(0, 7) === month && d.sport_type === sport);
+                    return match ? match.avg_hr : null;
+                }),
+                borderColor: colors[sport] || "#999",
+                backgroundColor: "transparent",
+                tension: 0.3
+            }));
+
+            new Chart(document.getElementById("heartRateChart"), {
+                type: "line",
+                data: { labels, datasets },
+                options: { responsive: true }
+            });
+        }
+
+        loadWeeklyDistance();
+        loadHeartRate();
+    </script>
+</body>
+</html>

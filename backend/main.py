@@ -1,0 +1,23 @@
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from dotenv import load_dotenv
+from backend.routes.activities import router as activities_router
+from backend.routes.auth import router as auth_router
+
+load_dotenv()
+
+app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+app.include_router(activities_router)
+app.include_router(auth_router)
+
+@app.get("/")
+def root():
+    return {"message": "Strava Dashboard API is running"}
